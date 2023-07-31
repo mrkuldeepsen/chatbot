@@ -1,11 +1,13 @@
-const express = require('express');
-const app = express();
+const express = require('express')
+const socket = require('socket.io');
+const app = express()
 
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require("path")
 
-const { authJWT } = require('./app/middleware/middleware')
+const { authJWT } = require('./app/middleware/middleware');
+const { botReply } = require('./app/controller/chatbot');
 
 require("dotenv").config({ path: __dirname + '/.env' });
 
@@ -22,6 +24,8 @@ app.use(authJWT)
 
 require('./app/router/user')(app);
 require('./app/router/auth')(app);
+require('./app/router/chatbot')(app);
+
 
 app.get('*', (req, res) => {
     res.status(400).send({
@@ -34,4 +38,16 @@ app.get('*', (req, res) => {
 
 const PORT = process.env.PORT || 5200
 
-app.listen(PORT, () => console.log(`Server is running port on ${PORT}`));
+
+const server = app.listen(PORT, () => console.log(`Server is running port on ${PORT}`))
+const io = socket(server);
+
+io.on("connection", function (socket) {
+
+    socket.on('clientMessage', (msg) => {
+
+        let serverResp = botReply(msg)
+
+        socket.emit('serverMessage', serverResp)
+    })
+});
