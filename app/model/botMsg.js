@@ -2,6 +2,9 @@ const mongoose = require("mongoose")
 const { Schema } = mongoose
 
 const botMsgSchema = Schema({
+    uid: {
+        type: String,
+    },
     first_name: {
         type: String,
     },
@@ -10,7 +13,6 @@ const botMsgSchema = Schema({
     },
     email: {
         type: String,
-        unique: true,
     },
     purpose: {
         type: String,

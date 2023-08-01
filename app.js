@@ -7,8 +7,7 @@ const bodyParser = require('body-parser');
 const path = require("path")
 
 const { authJWT } = require('./app/middleware/middleware');
-const { botReply } = require('./app/controller/botMsg');
-// const { botReply } = require('./app/controller/botMsg');
+const { createUUID } = require('./app/utils/helper');
 
 require("dotenv").config({ path: __dirname + '/.env' });
 
@@ -42,12 +41,36 @@ const PORT = process.env.PORT || 5200
 const server = app.listen(PORT, () => console.log(`Server is running port on ${PORT}`))
 const io = socket(server);
 
+const { botReply } = require('./app/controller/botMsg');
+
 io.on("connection", function (socket) {
 
-    socket.on('clientMessage', (msg) => {
+    const uid = createUUID()
 
-        let serverResp = botReply(msg)
+    const obj = {
+        data: {
+            uid: uid,
+            first_name: '',
+            last_name: '',
+            email: '',
+            purpose: '',
 
-        socket.emit('serverMessage', serverResp)
+            professions: '',
+            status: '',
+            positions: ''
+        },
+
+        count: 0
+    }
+
+
+    socket.on('clientMessage', async (msg) => {
+
+        let serverResp = botReply(msg, obj)
+
+        socket.emit('serverMessage', serverResp,)
     })
 });
+
+
+

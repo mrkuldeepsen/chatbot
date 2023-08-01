@@ -10,7 +10,7 @@ mongoose.connect(`${process.env.MONGO_DB_URI}`, {
 
 const db = {
     User: require('./user'),
-    BotMsg: require('./botMsg')
+    BotMsgs: require('./botMsg')
 }
 
 
