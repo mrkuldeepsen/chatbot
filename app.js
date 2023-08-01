@@ -7,7 +7,8 @@ const bodyParser = require('body-parser');
 const path = require("path")
 
 const { authJWT } = require('./app/middleware/middleware');
-const { botReply } = require('./app/controller/chatbot');
+const { botReply } = require('./app/controller/botMsg');
+// const { botReply } = require('./app/controller/botMsg');
 
 require("dotenv").config({ path: __dirname + '/.env' });
 
@@ -24,8 +25,7 @@ app.use(authJWT)
 
 require('./app/router/user')(app);
 require('./app/router/auth')(app);
-require('./app/router/chatbot')(app);
-
+require('./app/router/botMsg')(app)
 
 app.get('*', (req, res) => {
     res.status(400).send({
