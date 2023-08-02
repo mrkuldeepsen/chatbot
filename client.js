@@ -19,4 +19,6 @@ socket.on("serverMessage", (message) => {
 // Send a question to the server
 function askQuestion(question) {
     socket.emit("clientMessage", question);
+
 };
+

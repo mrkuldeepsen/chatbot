@@ -1,0 +1,55 @@
+<!-- index.html or your client-side file -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+</head>
+
+<body>
+    <h1>Welcome to the Astoria AI</h1>
+    <div id="chatbox"></div>
+    <form id="messageForm">
+        <input type="text" name="message" id="messageInput" placeholder="Type your message here" />
+        <input type="file" name="file" id="fileInput" />
+        <button type="submit">Send</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:5200'); // Replace with your server URL
+
+        document.getElementById('messageForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function () {
+                    const base64File = reader.result.split(',')[1]; // Extract the base64 content
+                    socket.emit('clientMessage', { message: message, file: base64File });
+                };
+                reader.readAsDataURL(file);
+            } else {
+                socket.emit('clientMessage', { message: message });
+            }
+
+            messageInput.value = '';
+        });
+
+        socket.on('serverMessage', (serverResp) => {
+            console.log('Server Response:', serverResp);
+            const chatbox = document.getElementById('chatbox');
+            const p = document.createElement('p');
+            p.innerText = serverResp;
+            chatbox.appendChild(p);
+        });
+    </script>
+</body>
+
+</html>
