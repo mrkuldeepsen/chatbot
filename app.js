@@ -89,7 +89,6 @@ io.on("connection", function (socket) {
     }, 2000)
 
     socket.on('clientMessage', async (msg) => {
-        // console.log(typeof msg.file);
         let serverResp = botReply(msg, obj)
         messages.push(serverResp);
         socket.emit('serverMessage', serverResp,)

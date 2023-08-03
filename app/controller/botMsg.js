@@ -4,9 +4,9 @@ const path = require('path');
 const pdf = require('pdf-parse');
 const axios = require('axios');
 
-const apiKey = 'YOUR_OPENAI_API_KEY';
-const apiUrl = 'https://api.openai.com/v1/engines/davinci-codex/completions'; // For GPT-3.5 (Codex)
 
+const apiKey = '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';
+const apiUrl = 'https://api.openai.com/v1/chat/completions'; // For GPT-3.5 (Codex)
 axios.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
 
 
@@ -14,13 +14,13 @@ exports.botMsg = async (req, res) => {
     const botmsg = BotMsgs.find()
 }
 
-
-
 exports.botReply = (arg, uuid,) => {
-
     var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
     const keys = [];
     let resp = ''
+
+
+    const steps = ['greetings', 'first_name', 'last_name', 'email', 'purpose', 'professions', 'status', 'positions', 'candidateCV']
 
     const userInputa = {
         greetings: ['hi', 'Hi', 'hello'],
@@ -57,116 +57,105 @@ exports.botReply = (arg, uuid,) => {
         thankyou: `Thank you for your time! Before we wrap up, is there anything else you would like to share with us that we haven't discussed yet?`,
 
         end: `Thank you for submitting your information. We will be in contact soon.`,
+        chatgptRespons: ''
     }
 
+    const getResult = (result) => {
+        return result?.content
+    }
 
     const getResp = (index) => {
         return response[index]
     }
-    const getResp2 = (index) => {
-        return index
-    }
+
     const getKeysByValue = (obj, value) => {
+        if (value?.message === 'skip') {
+            let response = steps[uuid.count];
+            uuid.count++
+            return getResp(response)
+        };
 
         if (uuid.count === 1) {
-            uuid.count = 2
             uuid.data.first_name = value.message
 
-            return response["first_name"];
         }
+        
         if (uuid.count === 2) {
-            uuid.count = 3
             uuid.data.last_name = value.message
-            return response["last_name"];
         }
 
         if (uuid.count === 3) {
             if (value?.message?.match(mailformat)) {
-                uuid.count = 0
                 uuid.data.email = value.message
-
                 const newBotMsg = new BotMsgs(uuid.data)
                 newBotMsg.save();
-                return response["email"];
             } else {
-                return 'Please enter a valid email address.';
+                return 'Please Enter vailid email and email is require!'
             }
         }
+
 
         if (!arg?.message && arg?.file) {
             const fileBuffer = arg?.file
             const binaryData = Buffer.from(fileBuffer, 'base64');
             const name = Date.now()
-            const filePath = path.join(__dirname, '..', 'upload', `${name}.pdf`); // Replace 'myfile.pdf' with your desired file name and extension
+            const filePath = path.join(__dirname, '..', 'upload', `${name}.pdf`);
             fs.writeFileSync(filePath, binaryData);
 
             let dataBuffer = fs.readFileSync(filePath);
 
             pdf(dataBuffer)
-                .then(function (data) {
-
-                    // number of pages
-                    // console.log('numpages>>>', data.numpages);
-                    // number of rendered pages
-                    // console.log('numrender>>', data.numrender);
-                    // PDF info
-                    // console.log('info>>>', data.info);
-                    // PDF metadata
-                    // console.log('metadata>>>', data.metadata);
-                    // PDF.js version
-                    // check https://mozilla.github.io/pdf.js/getting_started/
-                    // console.log(data.version);
-                    // PDF text
-
-                    console.log('text>>', data.text);
+                .then(async (data) => {
                     resp = data.text
-
                     const prompt = `act as an human resource chat bot ask me related MCQ with respect to my information below${resp}`;
-                    generateResponse(prompt)
-                        .then((response) => {
-                            console.log('ChatGPT response:>>>>>>>>', response);
-                        })
-                        .catch((error) => {
-                            console.error('Error:', error);
-                        });
-                })
 
+                    const newprompt = {
+                        model: "gpt-3.5-turbo",
+                        messages: [
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ]
+                    };
+
+                    try {
+                        const gptres = await generateResponse(newprompt)
+                        getpdfMCq = gptres && gptres?.content;
+
+                    } catch (error) {
+                        console.error('Error:', error.message);
+                        return error;
+                    }
+                })
+        
             return resp
         }
 
+        let response = steps[uuid.count];
+        uuid.count++
 
-        for (const key in obj) {
+        return getResp(response)
 
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-
-                const valuesArray = obj[key];
-
-                if (valuesArray.includes(value.message)) {
-
-                    key === 'greetings' ? uuid.count++ : uuid.count = 0
-
-                    keys.push(key);
-                }
-            }
-        }
-
-        return getResp(keys);
     }
 
     return getKeysByValue(userInputa, arg);
 };
 
 
-async function generateResponse(prompt) {
+async function generateResponse(newprompt) {
     try {
         const response = await axios.post(apiUrl, {
-            prompt: prompt,
-            max_tokens: 150, // Adjust as needed
-            temperature: 0.7, // Adjust to control the randomness of the response (higher values = more random)
+            model: 'gpt-3.5-turbo',
+            messages: newprompt.messages, // Use 'messages' property here
+            max_tokens: 150,
+            temperature: 0.7,
         });
-        return response.data.choices[0].text.trim();
-    } catch (error) {
-        console.error('Error generating response:', error);
-        return 'Error generating response.';
+
+        return response.data.choices[0].message
+    }
+    catch (error) {
+        console.error('Error generating response:', error.response ? error.response.data : error);
+        return error;
     }
 }
