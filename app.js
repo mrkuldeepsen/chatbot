@@ -1,9 +1,10 @@
 const express = require('express')
-const socket = require('socket.io');
 const app = express()
-const multer = require('multer');
+
 const cors = require('cors');
 const bodyParser = require('body-parser');
+
+const socket = require('socket.io');
 const path = require("path")
 
 const { authJWT } = require('./app/middleware/middleware');
@@ -23,18 +24,12 @@ app.use(cors({
     credentials: true
 }))
 
-app.use(bodyParser.urlencoded({ extended: true }));
+const payloadLimit = '5mb';
+app.use(bodyParser.json({ limit: payloadLimit }));
+app.use(bodyParser.urlencoded({ extended: true, limit: payloadLimit }));
 
 // app.use(authJWT)
 
-
-const upload = multer({
-    dest: 'public/uploads/'
-});
-
-app.post('/api/upload', upload.single('image'), (req, res) => {
-    res.json({ filename: req.file.filename });
-});
 
 require('./app/router/user')(app);
 require('./app/router/auth')(app);
@@ -89,8 +84,10 @@ io.on("connection", function (socket) {
     }, 2000)
 
     socket.on('clientMessage', async (msg) => {
-        let serverResp = botReply(msg, obj)
-        messages.push(serverResp);
+        let serverResp = await botReply(msg, obj)
+        
+        messages.push(serverResp && serverResp);
+
         socket.emit('serverMessage', serverResp,)
     });
 });

@@ -62,24 +62,33 @@ exports.createUUID = () => {
     return uuid
 }
 
+var magicNumbers = {
+    pdf: [0x25, 0x50, 0x44, 0x46],
+    png: [0x89, 0x50, 0x4E, 0x47],
+    jpeg: [0xFF, 0xD8, 0xFF],
+    doc: [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1],
+    docx: [0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00]
+};
 
-// exports.helpDeskMailer = (fromEmail, name, subject, message) => {
-//     const apiKey = client.authentications['api-key'];
-//     apiKey.apiKey = process.env.API_KEY;
 
-//     const tranEmailApi = new Sib.TransactionalEmailsApi();
+// Function to check if the buffer starts with a specific byte sequence
+function startsWith(buffer, bytes) {
+    if (buffer.length < bytes.length) return false;
+    for (var i = 0; i < bytes.length; i++) {
+        if (buffer[i] !== bytes[i]) return false;
+    }
+    return true;
+}
 
-//     const sender = { email: fromEmail, name: name, }
+// Function to determine the file type from the buffer
+exports.getFileType = (buffer) => {
+    for (var type in magicNumbers) {
+        if (startsWith(buffer, magicNumbers[type])) {
+            return type;
+        }
+    }
+    return null; // File type not recognized
+}
 
-//     const receivers = [{ email: `${process.env.TO_EMAIL}`, },]
+// Get the file type from the buffer
 
-//     tranEmailApi.sendTransacEmail({
-//         sender,
-//         to: receivers,
-//         subject: subject,
-//         textContent: message,
-//         params: {
-//             role: 'Frontend',
-//         },
-//     }).then(console.log).catch(console.log)
-// }

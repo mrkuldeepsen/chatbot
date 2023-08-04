@@ -1,28 +1,32 @@
-const { BotMsgs } = require("../model");
 const fs = require('fs')
-const path = require('path');
+
 const pdf = require('pdf-parse');
+let reader = require('any-text');
+
 const axios = require('axios');
+const path = require('path');
 
+const { BotMsgs } = require("../model");
+const { getFileType } = require("../utils/helper");
 
-const apiKey = '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';
-const apiUrl = 'https://api.openai.com/v1/chat/completions'; // For GPT-3.5 (Codex)
-axios.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
+axios.defaults.headers.common['Authorization'] = `Bearer ${process.env.API_KEY}`;
 
 
 exports.botMsg = async (req, res) => {
     const botmsg = BotMsgs.find()
 }
 
-exports.botReply = (arg, uuid,) => {
-    var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-    const keys = [];
-    let resp = ''
 
+exports.botReply = async (arg, uuid,) => {
+    const maxFileSize = 2 * 1024 * 1024;
+
+
+    let mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+    let resp = ''
 
     const steps = ['greetings', 'first_name', 'last_name', 'email', 'purpose', 'professions', 'status', 'positions', 'candidateCV']
 
-    const userInputa = {
+    let userInputa = {
         greetings: ['hi', 'Hi', 'hello'],
 
         first_name: '',
@@ -38,7 +42,7 @@ exports.botReply = (arg, uuid,) => {
         candidateCV: ''
     };
 
-    const response = {
+    let response = {
         greetings: ['Hello there! 👋', 'Welcome to company name', 'Could you please provide your first name?'],
 
         first_name: ['Could you please provide your last name?'],
@@ -60,26 +64,23 @@ exports.botReply = (arg, uuid,) => {
         chatgptRespons: ''
     }
 
-    const getResult = (result) => {
-        return result?.content
-    }
-
     const getResp = (index) => {
         return response[index]
     }
 
-    const getKeysByValue = (obj, value) => {
+    const getKeysByValue = async (obj, value) => {
+
         if (value?.message === 'skip') {
             let response = steps[uuid.count];
-            uuid.count++
-            return getResp(response)
-        };
+            uuid.count++;
+            return getResp(response);
+        }
 
         if (uuid.count === 1) {
             uuid.data.first_name = value.message
 
         }
-        
+
         if (uuid.count === 2) {
             uuid.data.last_name = value.message
         }
@@ -92,70 +93,88 @@ exports.botReply = (arg, uuid,) => {
             } else {
                 return 'Please Enter vailid email and email is require!'
             }
-        }
-
-
+        };
+        
         if (!arg?.message && arg?.file) {
-            const fileBuffer = arg?.file
-            const binaryData = Buffer.from(fileBuffer, 'base64');
-            const name = Date.now()
-            const filePath = path.join(__dirname, '..', 'upload', `${name}.pdf`);
-            fs.writeFileSync(filePath, binaryData);
+            const fileBuffer = arg?.file;
 
+            const binaryData = Buffer.from(fileBuffer, 'base64');
+            const name = Date.now();
+            let filePath = ''
+
+            var type = getFileType(binaryData);
+
+            if (type === 'pdf') {
+                filePath = path.join(__dirname, '..', 'upload', `${name}.pdf`);
+            }
+            else if (type === 'docx') {
+                filePath = path.join(__dirname, '..', 'upload', `${name}.docx`);
+            }
+
+            fs.writeFileSync(filePath, binaryData);
             let dataBuffer = fs.readFileSync(filePath);
 
-            pdf(dataBuffer)
-                .then(async (data) => {
-                    resp = data.text
-                    const prompt = `act as an human resource chat bot ask me related MCQ with respect to my information below${resp}`;
+            try {
+                let data
+                if (type === 'pdf') {
+                    data = await pdf(dataBuffer);
+                    resp = data.text;
 
-                    const newprompt = {
-                        model: "gpt-3.5-turbo",
-                        messages: [
-                            {
-                                role: "user",
-                                content: prompt
-                            }
-                        ]
-                    };
+                }
+                else if (type === 'docx') {
+                    const data = await reader.getText(filePath);
+                    resp = data
+                }
 
-                    try {
-                        const gptres = await generateResponse(newprompt)
-                        getpdfMCq = gptres && gptres?.content;
+                const prompt = `act as an human resource chat bot ask me related 10 MCQs with respect to my information below\n ${resp}`;
 
-                    } catch (error) {
-                        console.error('Error:', error.message);
-                        return error;
-                    }
-                })
-        
-            return resp
+                const newprompt = {
+                    model: "gpt-3.5-turbo",
+                    messages: [
+                        {
+                            role: "user",
+                            content: prompt
+                        }
+                    ]
+                };
+
+                try {
+                    const chatGptresponse = await generateResponse(newprompt);
+                    response.chatgptRespons = chatGptresponse?.message?.content;
+                    let result = response.chatgptRespons
+                    return result
+                } catch (error) {
+                    console.error('Error:', error.message);
+                    return error && error.message;
+                }
+            }
+            catch (error) {
+                console.error('Error reading PDF:', error.message);
+                return error && error.message;
+            }
         }
 
-        let response = steps[uuid.count];
-        uuid.count++
+        let response1 = steps[uuid.count];
+        uuid.count++;
 
-        return getResp(response)
-
-    }
+        return getResp(response1);
+    };
 
     return getKeysByValue(userInputa, arg);
 };
 
-
-async function generateResponse(newprompt) {
+const generateResponse = async (newprompt) => {
     try {
-        const response = await axios.post(apiUrl, {
+        const response = await axios.post(process.env.API_URL, {
             model: 'gpt-3.5-turbo',
-            messages: newprompt.messages, // Use 'messages' property here
+            messages: newprompt.messages,
             max_tokens: 150,
             temperature: 0.7,
         });
 
-        return response.data.choices[0].message
-    }
-    catch (error) {
-        console.error('Error generating response:', error.response ? error.response.data : error);
-        return error;
+        return response.data.choices[0];
+
+    } catch (error) {
+        throw error;
     }
 }
