@@ -4,15 +4,17 @@ const app = express()
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
+
 const socket = require('socket.io');
 const path = require("path")
+
+require("dotenv").config({ path: __dirname + '/.env' });
 
 const { authJWT } = require('./app/middleware/middleware');
 const { createUUID } = require('./app/utils/helper');
 
 const messages = [];
 
-require("dotenv").config({ path: __dirname + '/.env' });
 
 app.use(express.json());
 
@@ -34,7 +36,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: payloadLimit }));
 require('./app/router/user')(app);
 require('./app/router/auth')(app);
 require('./app/router/botMsg')(app)
-
+require('./app/router/rating')(app)
 
 
 app.get('/api/chat', (req, res) => {
@@ -52,14 +54,12 @@ app.get('*', (req, res) => {
 
 const PORT = process.env.PORT || 5200
 
-
 const server = app.listen(PORT, () => console.log(`Server is running port on ${PORT}`))
 const io = socket(server);
 
 const { botReply } = require('./app/controller/botMsg');
 
 io.on("connection", function (socket) {
-
     const uid = createUUID()
 
     const obj = {
@@ -85,7 +85,7 @@ io.on("connection", function (socket) {
 
     socket.on('clientMessage', async (msg) => {
         let serverResp = await botReply(msg, obj)
-        
+
         messages.push(serverResp && serverResp);
 
         socket.emit('serverMessage', serverResp,)

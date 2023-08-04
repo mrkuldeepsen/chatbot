@@ -26,4 +26,7 @@ module.exports = {
     UpdatePasssword: 'You have successfully reset your password',
     PasswordConfirmPassNotMatch: 'Password and confirm password should be same.',
 
+
+    Rating: 'Congratulations on successfully rating our service! 🌟 Your feedback means a lot to us, and we are thrilled that you had a positive experience. Thank you for taking the time to share your thoughts with us.'
+
 }
