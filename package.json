@@ -1,4 +1,5 @@
-{ "name": "astoria-ai",
+{
+  "name": "astoria-ai",
   "version": "1.0.0",
   "description": "",
   "main": "app.js",
@@ -32,5 +33,8 @@
     "socket.io": "^4.7.1",
     "socket.io-client": "^4.7.1",
     "socket.io-file": "^2.0.31"
+  },
+  "engines": {
+    "node": ">=14.20.1"
   }
 }
