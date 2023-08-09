@@ -7,6 +7,9 @@ const bodyParser = require('body-parser');
 
 const socket = require('socket.io');
 const path = require("path")
+const multer = require('multer');
+const upload = multer({ dest: 'upload/' });
+
 
 require("dotenv").config({ path: __dirname + '/.env' });
 
@@ -79,15 +82,18 @@ io.on("connection", function (socket) {
     }
 
     const intro = `Greetings! I am your friendly AI agent from Astoria AI, here to assist you in any way possible. As a cutting-edge artificial intelligence, I have been meticulously crafted by the brilliant minds at Astoria AI to provide you with seamless and intuitive interactions. Equipped with the latest advancements in natural language processing and machine learning, I am designed to comprehend human language and deliver relevant and accurate responses.`
-    setTimeout(() => {
-        socket.emit('serverMessage', intro)
-    }, 2000)
 
-    socket.on('clientMessage', async (msg) => {
-        let serverResp = await botReply(msg, obj)
+    socket.emit('serverMessage', intro)
 
+    socket.on('clientMessage', async (data) => {
+
+        // console.log('data>>>>>>>', data);
+
+        let serverResp = await botReply(data, obj)
         messages.push(serverResp && serverResp);
 
-        socket.emit('serverMessage', serverResp,)
+        setTimeout(() => {
+            socket.emit('serverMessage', serverResp,)
+        }, 1000)
     });
 });

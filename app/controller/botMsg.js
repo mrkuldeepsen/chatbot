@@ -20,18 +20,17 @@ exports.botMsg = async (req, res) => {
 exports.botReply = async (arg, uuid,) => {
     const maxFileSize = 2 * 1024 * 1024;
 
-
     let mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
     let resp = ''
 
-    const steps = ['greetings', 'first_name', 'last_name', 'email', 'purpose', 'professions', 'status', 'positions', 'candidateCV']
+    const steps = ['greetings', 'email', 'visa', 'full_name', 'purpose', 'professions', 'status', 'positions', 'candidateCV']
 
     let userInputa = {
         greetings: ['hi', 'Hi', 'hello'],
 
-        first_name: '',
-        last_name: '',
         email: '',
+        visa: '',
+        full_name: '',
 
         purpose: ['general inquiry', 'career options'],
 
@@ -39,16 +38,17 @@ exports.botReply = async (arg, uuid,) => {
         status: ['experience', 'fresher'],
         positions: ['node developer', 'react developer', 'mern developer', 'react native developer', 'flutter'],
 
-        candidateCV: ''
+        candidateCV: '',
+        thankyou: ''
     };
 
     let response = {
-        greetings: ['Hello there! 👋', 'Welcome to company name', 'Could you please provide your first name?'],
+        greetings: ['Hello there! 👋', 'Welcome to company name', 'Could you please provide your email address?'],
 
-        first_name: ['Could you please provide your last name?'],
-        last_name: ['Could you please provide your email address?'],
+        email: ['Do you have Visa card?', 'Please enter you visa card number'],
+        visa: ['Could you please provide your full name?'],
 
-        email: [`Please select your popuse`, 'General inquiry', 'Career options'],
+        full_name: [`Please select your popuse`, 'General inquiry', 'Career options'],
         purpose: ['Human resource', 'Developer', 'UI/UX designer', 'Marketing', 'Manager'],
 
         professions: [`Are you ...?`, 'Experience', 'Fresher'],
@@ -56,12 +56,10 @@ exports.botReply = async (arg, uuid,) => {
         status: [`Could you please provide your position?`, 'Node developer', 'React Developer', 'MERN developer', 'React native developer', 'Flutter'],
         positions: [`Please upload your CV`],
 
-
-
         thankyou: `Thank you for your time! Before we wrap up, is there anything else you would like to share with us that we haven't discussed yet?`,
 
         end: `Thank you for submitting your information. We will be in contact soon.`,
-        chatgptRespons: ''
+        chatgptRespons: []
     }
 
     const getResp = (index) => {
@@ -77,25 +75,25 @@ exports.botReply = async (arg, uuid,) => {
         }
 
         if (uuid.count === 1) {
-            uuid.data.first_name = value.message
-
-        }
-
-        if (uuid.count === 2) {
-            uuid.data.last_name = value.message
-        }
-
-        if (uuid.count === 3) {
             if (value?.message?.match(mailformat)) {
                 uuid.data.email = value.message
-                const newBotMsg = new BotMsgs(uuid.data)
-                newBotMsg.save();
+
             } else {
                 return 'Please Enter vailid email and email is require!'
             }
+        }
+
+        if (uuid.count === 2) {
+            uuid.data.visa = value.message
+        }
+
+        if (uuid.count === 3) {
+            uuid.data.full_name = value.message
+            const newBotMsg = new BotMsgs(uuid.data)
+            newBotMsg.save();
         };
-        
-        if (!arg?.message && arg?.file) {
+
+        if (arg?.file) {
             const fileBuffer = arg?.file;
 
             const binaryData = Buffer.from(fileBuffer, 'base64');
@@ -103,7 +101,6 @@ exports.botReply = async (arg, uuid,) => {
             let filePath = ''
 
             var type = getFileType(binaryData);
-
             if (type === 'pdf') {
                 filePath = path.join(__dirname, '..', 'upload', `${name}.pdf`);
             }
@@ -119,20 +116,20 @@ exports.botReply = async (arg, uuid,) => {
                 if (type === 'pdf') {
                     data = await pdf(dataBuffer);
                     resp = data.text;
-
                 }
                 else if (type === 'docx') {
                     const data = await reader.getText(filePath);
                     resp = data
                 }
 
-                const prompt = `act as an human resource chat bot ask me related 10 MCQs with respect to my information below\n ${resp}`;
+                // const prompt = `As a skilled human resource chatbot, your task is to Based on the candidate's information, create a set of advanced interview 10  Multiple choice questions. The selection of interview 10 multiple choice questions  should be tailored to the candidate's experience and skills. If the candidate is a fresher, the question list should be prepared accordingly. \n ${resp}`;
+                const prompt = `As a intelligent human resource chatbot, please create a set of technical and soft skills  multiple-choice questions tailored to a candidateExperience candidate with skills in ${resp}.\n I want to get response in question and options key value pairs`;
 
                 const newprompt = {
                     model: "gpt-3.5-turbo",
                     messages: [
                         {
-                            role: "user",
+                            role: "system",
                             content: prompt
                         }
                     ]
@@ -140,9 +137,16 @@ exports.botReply = async (arg, uuid,) => {
 
                 try {
                     const chatGptresponse = await generateResponse(newprompt);
-                    response.chatgptRespons = chatGptresponse?.message?.content;
+                    // console.log(chatGptresponse?.message);
+
+                    response.chatgptRespons = chatGptresponse?.message?.content.split('\n');
                     let result = response.chatgptRespons
-                    return result
+                    result = result.filter(line => line.trim() !== '');
+
+                    console.log(result);
+
+
+                    return result;
                 } catch (error) {
                     console.error('Error:', error.message);
                     return error && error.message;
@@ -171,7 +175,6 @@ const generateResponse = async (newprompt) => {
             max_tokens: 150,
             temperature: 0.7,
         });
-
         return response.data.choices[0];
 
     } catch (error) {

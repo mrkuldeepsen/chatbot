@@ -35,7 +35,7 @@ exports.login = async (req, res,) => {
         })
     }
 
-}
+};
 
 // Logout User
 exports.logout = async (req, res) => {
@@ -52,12 +52,10 @@ exports.logout = async (req, res) => {
     catch (error) {
         handleError(error, req, res)
     }
-}
+};
 
-// // Forgot Password
 exports.forgotPassword = async (req, res) => {
     const email = req.body.email
-
     const user = await User.findOne({ email: email.toLowerCase() })
 
     if (user === null) {
@@ -93,9 +91,8 @@ exports.forgotPassword = async (req, res) => {
                 handleError(err.message, req, res)
             })
     }
-}
+};
 
-// // Forgot Password verify
 exports.forgotPasswordVerify = async (req, res) => {
 
     const user = await User.findOne({ token: req.body.token })
@@ -118,10 +115,9 @@ exports.forgotPasswordVerify = async (req, res) => {
     else
         return res.send({ message: 'Password and confirm password should be same.', error: true })
 
-}
-
+};
 
 exports.me = async (req, res) => {
     const user = await User.findOne({ _id: req.user.id })
     user === null ? handleError('Unauthorized user', req, res) : handleResponse(res, user, 200)
-}
+};
