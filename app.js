@@ -61,7 +61,15 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 5200
 
 const server = app.listen(PORT, () => console.log(`Server is running port on ${PORT}`))
-const io = socket(server);
+const io = socket(server, {
+    cors: {
+        origin: ['https://ai-astoria-staging.netlify.app', 'http://localhost:3000'],
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        allowedHeaders: '*',
+        credentials: true,
+    },
+});
+
 
 const { botReply } = require('./app/controller/botMsg');
 
