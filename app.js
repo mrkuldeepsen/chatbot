@@ -28,7 +28,9 @@ app.use(cors({
     origin: ['https://ai-astoria-staging.netlify.app', 'http://localhost:3000'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: '*',
+    credentials: true, // Add this line
 }));
+
 
 const payloadLimit = '5mb';
 app.use(bodyParser.json({ limit: payloadLimit }));
