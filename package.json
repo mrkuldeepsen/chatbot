@@ -1,4 +1,11 @@
-{
+{ "name": "astoria-ai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
   "dependencies": {
     "@nlpjs/console-connector": "^4.26.1",
     "any-text": "^1.2.0",
