@@ -6,7 +6,7 @@ let reader = require('any-text');
 const axios = require('axios');
 const path = require('path');
 
-const { BotMsgs } = require("../model");
+const { BotMsgs, Questions } = require("../model");
 const { getFileType } = require("../utils/helper");
 
 axios.defaults.headers.common['Authorization'] = `Bearer ${process.env.API_KEY}`;
@@ -16,14 +16,14 @@ exports.botMsg = async (req, res) => {
     const botmsg = BotMsgs.find()
 }
 
-
 exports.botReply = async (arg, uuid,) => {
+
     const maxFileSize = 2 * 1024 * 1024;
 
     let mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
     let resp = ''
 
-    const steps = ['greetings', 'email', 'visa', 'full_name', 'purpose', 'professions', 'status', 'positions', 'candidateCV']
+    const steps = ['greetings', 'email', 'visa', 'full_name', 'purpose', 'professions', 'status', 'positions', 'candidateCV', 'thankyou', 'end']
 
     let userInputa = {
         greetings: ['hi', 'Hi', 'hello'],
@@ -43,7 +43,7 @@ exports.botReply = async (arg, uuid,) => {
     };
 
     let response = {
-        greetings: ['Hello there! 👋', 'Welcome to company name', 'Could you please provide your email address?'],
+        greetings: ['Hello there! 👋', 'Could you please provide your email address?'],
 
         email: ['Do you have Visa card?', 'Please enter you visa card number'],
         visa: ['Could you please provide your full name?'],
@@ -56,17 +56,20 @@ exports.botReply = async (arg, uuid,) => {
         status: [`Could you please provide your position?`, 'Node developer', 'React Developer', 'MERN developer', 'React native developer', 'Flutter'],
         positions: [`Please upload your CV`],
 
-        thankyou: `Thank you for your time! Before we wrap up, is there anything else you would like to share with us that we haven't discussed yet?`,
+        chatgptRespons: [''],
+        thankyou: [{ end: `Thank you for your time! Before we wrap up, is there anything else you would like to share with us that we haven't discussed yet?` }],
 
-        end: `Thank you for submitting your information. We will be in contact soon.`,
-        chatgptRespons: []
+        end: [{ end: `Thank you for submitting your information. We will be in contact soon.` }],
     }
 
-    const getResp = (index) => {
-        return response[index]
+    const getResp = (key) => {
+        return response[key]
     }
 
     const getKeysByValue = async (obj, value) => {
+        if (uuid.count === steps.length) {
+            uuid.count = 0
+        }
 
         if (value?.message === 'skip') {
             let response = steps[uuid.count];
@@ -137,16 +140,27 @@ exports.botReply = async (arg, uuid,) => {
 
                 try {
                     const chatGptresponse = await generateResponse(newprompt);
-                    // console.log(chatGptresponse?.message);
-
                     response.chatgptRespons = chatGptresponse?.message?.content.split('\n');
                     let result = response.chatgptRespons
                     result = result.filter(line => line.trim() !== '');
+                    console.log('uuid>>>>>>>>', result);
 
-                    console.log(result);
+                    // Store the generated questions and options in the database
+                    // if (result.length > 0) {
+                    // const questionObjects = result.map(line => {
+                    //     const [questionText, ...options] = line.split(' | ');
+                    //     return {
+                    //         user_id: 'your_user_id_here', // Set the user ID accordingly
+                    //         question: questionText,
+                    //         options
+                    //     };
+                    // });
 
+                    // await Questions.insertMany(questionObjects); // Save multiple questions to the database
+                    // }
 
                     return result;
+
                 } catch (error) {
                     console.error('Error:', error.message);
                     return error && error.message;
