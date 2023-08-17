@@ -3,12 +3,8 @@ const app = express()
 
 const cors = require('cors');
 const bodyParser = require('body-parser');
-
-
 const socket = require('socket.io');
-const path = require("path")
-const multer = require('multer');
-const upload = multer({ dest: 'upload/' });
+const path = require("path");
 
 
 require("dotenv").config({ path: __dirname + '/.env' });
@@ -24,6 +20,7 @@ app.use(express.json());
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
+// Allow all origins, methods, and headers
 app.use(cors({
     origin: ['https://ai-astoria-staging.netlify.app', 'http://localhost:3000'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -70,38 +67,32 @@ const io = socket(server, {
     },
 });
 
-
 const { botReply } = require('./app/controller/botMsg');
 
 io.on("connection", function (socket) {
     const uid = createUUID()
 
-    const obj = {
-        data: {
-            uid: uid,
-            first_name: '',
-            last_name: '',
-            email: '',
-            purpose: '',
-
-            professions: '',
-            status: '',
-            positions: ''
-        },
-
-        count: 0
+    const client = {
+        uid: uid,
+        count: 0,
+        getData: []
     }
 
     const intro = `Greetings! I am your friendly AI agent from Astoria AI, here to assist you in any way possible. As a cutting-edge artificial intelligence, I have been meticulously crafted by the brilliant minds at Astoria AI to provide you with seamless and intuitive interactions. Equipped with the latest advancements in natural language processing and machine learning, I am designed to comprehend human language and deliver relevant and accurate responses.`
-
     socket.emit('serverMessage', intro)
 
     socket.on('clientMessage', async (data) => {
+        let serverResp = '';
 
-        // console.log('data>>>>>>>', data);
-
-        let serverResp = await botReply(data, obj)
-        messages.push(serverResp && serverResp);
+        if (data?.file) {
+            const blob = new Blob([data.file], { type: 'application/pdf' });
+            serverResp = await botReply(data, client, blob)
+            messages.push(serverResp && serverResp);
+        }
+        else {
+            serverResp = await botReply(data, client)
+            messages.push(serverResp && serverResp);
+        };
 
         setTimeout(() => {
             socket.emit('serverMessage', serverResp,)
