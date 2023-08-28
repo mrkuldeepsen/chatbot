@@ -43,6 +43,7 @@ const questions = [
 ];
 
 exports.botReply = async (message, client, blob) => {
+
     let mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
     let resp = '';
 
@@ -66,6 +67,8 @@ exports.botReply = async (message, client, blob) => {
     const dataArray = [];
 
     if (client.getData.length === 5) {
+
+
         client['getData'].map((item) => {
             dataArray.push({
                 user_id: client?.uid,
@@ -91,7 +94,7 @@ exports.botReply = async (message, client, blob) => {
                     'accept': 'application/json',
                     'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
                 },
-            });
+            })
 
             const data = result.data.map((d) => {
                 return {
